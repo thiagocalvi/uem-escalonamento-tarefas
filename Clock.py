@@ -13,7 +13,7 @@ class Clock:
         self.current_clock = 0
         self.running = True
         
-    def send_to_emissor(self):
+    def _send_to_emissor(self):
         """Envia clock para o Emissor"""
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
@@ -24,7 +24,7 @@ class Clock:
         except Exception as e:
             print(f"Erro ao enviar para Emissor: {e}")
             
-    def send_to_escalonador(self):
+    def _send_to_escalonador(self):
         """Envia clock para o Escalonador"""
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
@@ -57,13 +57,13 @@ class Clock:
             print(f"Clock: {self.current_clock}")
             
             # 1. Envia para EMISSOR primeiro
-            self.send_to_emissor()
+            self._send_to_emissor()
             
             # 2. Espera 5ms
             time.sleep(self.emissor_escalonador_delay / 1000.0)
             
             # 3. Envia para ESCALONADOR
-            self.send_to_escalonador()
+            self._send_to_escalonador()
             
             # Se recebeu FIM, para o loop
             if not self.running:

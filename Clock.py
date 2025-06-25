@@ -14,3 +14,17 @@ class Clock:
         self.emissor_socket = None
         self.escalonador_socket = None
 
+    def start(self) -> None:
+       while True:
+            self.current_clock += 1
+            print(f"Clock: {self.current_clock}")
+            
+            # Envia o tempo atual para o Emissor de Tarefas
+            self.send_to_emissor()
+            
+            # Envia o tempo atual para o Escalonador de Tarefas
+            self.send_to_escalonador()
+            
+            # Aguarda o delay do clock
+            time.sleep(self.clock_delay / 1000.0)
+

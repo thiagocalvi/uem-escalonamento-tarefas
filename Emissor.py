@@ -1,9 +1,8 @@
 import socket
 import json
-from Task import Task
 
 class Emissor:
-    def __init__(self, host: str, port_emissor: int, port_escalonador: int, port_clock: int, tasks_data: list):
+    def __init__(self, host: str, port_emissor: int, port_escalonador: int, port_clock: int, tasks: list):
         """
         Inicializa o Emissor.
         Args:
@@ -11,41 +10,18 @@ class Emissor:
             port_emissor (int): Porta do Emissor
             port_escalonador (int): Porta do Escalonador
             port_clock (int): Porta do Clock
-            tasks_data (list): Lista de dados das tarefas já carregadas da main
+            tasks (list): Lista de tarefas
         """
         self.host = host
         self.port_emissor = port_emissor
         self.port_escalonador = port_escalonador
         self.port_clock = port_clock
         
-        self.tasks = []  # Lista de todas as tarefas
+        self.tasks = tasks  # Lista de todas as tarefas
         self.emitted_tasks = []  # Tarefas já emitidas
         self.current_clock = 0
         self.all_tasks_emitted = False
         self.server_socket = None
-        
-        # Processa os dados das tarefas recebidas da main
-        self.load_tasks_from_data(tasks_data)
-        
-    def load_tasks_from_data(self, tasks_data):
-        """Carrega as tarefas a partir dos dados fornecidos pela main"""
-        try:
-            for task_info in tasks_data:
-                if len(task_info) == 4:
-                    task_id = task_info[0]  # String (t0, t1, etc.)
-                    arrival_time = int(task_info[1])
-                    burst_time = int(task_info[2])
-                    priority = int(task_info[3])
-                    
-                    task = Task(task_id, arrival_time, burst_time, priority)
-                    self.tasks.append(task)
-                        
-            # Ordena por tempo de chegada para facilitar processamento
-            self.tasks.sort(key=lambda t: t.arrival_time)
-            print(f"Emissor: {len(self.tasks)} tarefas carregadas")
-            
-        except Exception as e:
-            print(f"Erro ao carregar tarefas: {e}")
             
     def send_to_clock(self, message):
         """Envia mensagem para o Clock"""
@@ -125,4 +101,37 @@ class Emissor:
         # Verifica e emite tarefas para este clock
         self.check_and_emit_tasks()
         
-    
+    def start_server(self):
+        """Inicia o servidor do Emissor para receber mensagens do Clock"""
+        try:
+            self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            self.server_socket.bind((self.host, self.port_emissor))
+            self.server_socket.listen(5)
+            
+            print(f"Emissor: Servidor iniciado em {self.host}:{self.port_emissor}")
+            
+            while True:
+                try:
+                    client_socket, client_address = self.server_socket.accept()
+                    
+                    # Recebe dados do cliente (Clock)
+                    data = client_socket.recv(1024)
+                    if data:
+                        clock_value = int(data.decode().strip())
+                        self.handle_clock_message(clock_value)
+                    
+                    client_socket.close()
+                    
+                except Exception as e:
+                    print(f"Erro ao processar conexão: {e}")
+                    break
+                    
+        except Exception as e:
+            print(f"Erro no servidor Emissor: {e}")
+        finally:
+            if self.server_socket:
+                self.server_socket.close()
+                print("Emissor: Servidor encerrado")
+
+

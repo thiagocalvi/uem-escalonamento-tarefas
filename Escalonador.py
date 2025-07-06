@@ -366,7 +366,7 @@ class Escalonador:
             
             # Timeline de execução
             output_lines.append("Timeline de execução:")
-            timeline_str = " | ".join(self.execution_timeline)
+            timeline_str = " | ".join(str(item) for item in self.execution_timeline)
             output_lines.append(timeline_str)
             output_lines.append("")
             

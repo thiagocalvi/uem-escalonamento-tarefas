@@ -112,7 +112,7 @@ def cleanup_processes(process_list):
             print(f"  Terminando processo {process.name} (PID: {process.pid})")
             process.terminate()
     
-    # Aguarda processos terminarem graciosamente
+    # Aguarda processos terminarem
     time.sleep(2)
     
     # Força finalização se necessário
@@ -293,6 +293,7 @@ def main():
         clock_process.start()
         processes.append(clock_process)
         print(f"✓ Processo Clock iniciado (PID: {clock_process.pid})")
+        time.sleep(1)  # Aguarda o servidor subir
         
         print("\n✓ Todos os processos iniciados com sucesso!")
         print("✓ Simulação em andamento...")

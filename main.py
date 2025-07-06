@@ -149,11 +149,11 @@ def run_emissor_process(host, port_emissor, port_escalonador, port_clock, tasks)
     except Exception as e:
         print(f"[EMISSOR] Erro no processo do Emissor: {e}")
 
-def run_escalonador_process(host, port_escalonador, port_clock, algorithm):
+def run_escalonador_process(host, port_escalonador, port_clock, port_emissor, algorithm):
     """Função para executar o processo do Escalonador"""
     try:
         print(f"[ESCALONADOR] Iniciando processo do Escalonador (PID: {os.getpid()})")
-        escalonador = Escalonador(host, port_escalonador, port_clock, algorithm)
+        escalonador = Escalonador(host, port_escalonador, port_clock, port_emissor, algorithm)  # ADICIONAR port_emissor
         escalonador.start_server()
         print(f"[ESCALONADOR] Processo finalizado normalmente")
     except KeyboardInterrupt:
@@ -265,7 +265,7 @@ def main():
         # Inicia o processo do Escalonador primeiro (servidor)
         escalonador_process = multiprocessing.Process(
             target=run_escalonador_process,
-            args=(HOST, PORT_ESCALONADOR, PORT_CLOCK, algorithm),
+            args=(HOST, PORT_ESCALONADOR, PORT_CLOCK, PORT_EMISSOR, algorithm),
             name="Escalonador"
         )
         escalonador_process.start()

@@ -7,7 +7,7 @@ from collections import deque
 from Task import Task
 
 class Escalonador:
-    def __init__(self, host: str, port_escalonador: int, port_clock: int, algorithm: str):
+    def __init__(self, host: str, port_escalonador: int, port_clock: int, port_emissor: int, algorithm: str):
         """
         Inicializa o Escalonador.
         Args:
@@ -19,6 +19,7 @@ class Escalonador:
         self.host = host
         self.port_escalonador = port_escalonador
         self.port_clock = port_clock
+        self.port_emissor = port_emissor
         self.algorithm = algorithm
         
         self.ready_queue = []  # Fila de tarefas prontas
@@ -314,6 +315,17 @@ class Escalonador:
                 print("Escalonador: Sinal de FIM enviado ao Clock")
         except Exception as e:
             print(f"Erro ao enviar sinal de FIM ao Clock: {e}")
+
+    def send_end_signal_to_emissor(self):
+        """Envia sinal de FIM para o Emissor"""
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                sock.connect((self.host, self.port_emissor))
+                message = "FIM".encode()
+                sock.send(message)
+                print("Escalonador: Sinal de FIM enviado ao Emissor")
+        except Exception as e:
+            print(f"Erro ao enviar sinal de FIM ao Emissor: {e}")
             
     def check_simulation_end(self):
         """Verifica se a simulação deve terminar"""
@@ -326,8 +338,9 @@ class Escalonador:
         """Finaliza a simulação"""
         self.simulation_finished = True
         
-        # Envia sinal de fim para Clock
+        # Envia sinal de fim para Clock e Emissor
         self.send_end_signal_to_clock()
+        self.send_end_signal_to_emissor()
         
         # Gera arquivo de saída
         self.generate_output_file()

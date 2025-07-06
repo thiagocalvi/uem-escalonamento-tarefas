@@ -133,13 +133,31 @@ class Emissor:
             
             while True:
                 try:
-                    client_socket, client_address = self.server_socket.accept()
+                    # ADICIONAR TIMEOUT para não travar para sempre
+                    self.server_socket.settimeout(1.0)
                     
-                    # Recebe dados do cliente (Clock)
+                    try:
+                        client_socket, client_address = self.server_socket.accept()
+                    except socket.timeout:
+                        continue  # Continua o loop
+                    
+                    # Recebe dados do cliente (Clock ou Escalonador)
                     data = client_socket.recv(1024)
                     if data:
-                        clock_value = int(data.decode().strip())
-                        self.handle_clock_message(clock_value)
+                        message = data.decode().strip()
+                        
+                        # VERIFICAR SE É SINAL DE FIM
+                        if message.upper() == "FIM":
+                            print("Emissor: Recebido sinal de FIM. Encerrando...")
+                            client_socket.close()
+                            break  # Sai do loop
+                        
+                        # Senão, trata como clock
+                        try:
+                            clock_value = int(message)
+                            self.handle_clock_message(clock_value)
+                        except ValueError:
+                            print(f"Emissor: Mensagem inválida recebida: {message}")
                     
                     client_socket.close()
                     

@@ -22,26 +22,6 @@ class Emissor:
         self.current_clock = 0
         self.all_tasks_emitted = False
         self.server_socket = None
-
-    # def load_tasks_from_data(self, tasks_data):
-    #     """Carrega as tarefas a partir dos dados fornecidos pela main"""
-    #     try:
-    #         for task_info in tasks_data:
-    #             if len(task_info) == 4:
-    #                 task_id = task_info[0]  # String (t0, t1, etc.)
-    #                 arrival_time = int(task_info[1])
-    #                 burst_time = int(task_info[2])
-    #                 priority = int(task_info[3])
-                    
-    #                 task = Task(task_id, arrival_time, burst_time, priority)
-    #                 self.tasks.append(task)
-                        
-    #         # Ordena por tempo de chegada para facilitar processamento
-    #         self.tasks.sort(key=lambda t: t.arrival_time)
-    #         print(f"Emissor: {len(self.tasks)} tarefas carregadas")
-            
-    #     except Exception as e:
-    #         print(f"Erro ao carregar tarefas: {e}")
             
     def send_to_clock(self, message):
         """Envia mensagem para o Clock"""

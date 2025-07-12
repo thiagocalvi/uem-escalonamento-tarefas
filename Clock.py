@@ -16,7 +16,10 @@ class Clock:
         self.server_socket = None
         
     def _send_to_emissor(self):
-        """Envia clock para o Emissor"""
+        """
+            Envia sinal de clock para o Emissor
+        """
+        
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                 sock.connect((self.host, self.port_emissor))
@@ -27,7 +30,10 @@ class Clock:
             print(f"Erro ao enviar para Emissor: {e}")
             
     def _send_to_escalonador(self):
-        """Envia clock para o Escalonador"""
+        """
+            Envia sinal de clock para o Escalonador
+        """
+        
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                 sock.connect((self.host, self.port_escalonador))
@@ -38,33 +44,36 @@ class Clock:
         except Exception as e:
             print(f"Erro ao enviar para Escalonador: {e}")
             
-    def handle_message(self, message: str):
-        """Processa mensagens recebidas pelo servidor"""
-        message = message.strip().upper()
-        
-        if message == "FIM":
+    def _handle_message(self, message: str):
+        """
+            Processa mensagens recebidas pelo servidor, verifica se é um sinal de "FIM" e encerra o loop
+        """
+
+        if message.strip().upper() == "FIM":
             print("Clock: Recebido sinal de FIM. Encerrando...")
             self.running = False
         else:
             print(f"Clock: Mensagem desconhecida recebida: {message}")
     
     def start_server(self):
-        """Inicia o servidor do Clock para receber mensagens de controle"""
+        """
+            Inicia o socket do Clock e aguarda conexões
+        """
         try:
-            self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            self.server_socket.bind((self.host, self.port_clock))
-            self.server_socket.listen(5)
+            self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # Cria o socket
+            self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) # Permiti reutilização de endereço (host:porta) - Manter durante do desenvolvimento
+            self.server_socket.bind((self.host, self.port_clock)) # Vincula o socket ao host e porta 
+            self.server_socket.listen(5) # Máximo de conexões pendentes
             
             print(f"Clock: Servidor iniciado em {self.host}:{self.port_clock}")
             
             while self.running:
                 try:
-                    # Timeout para verificar se ainda está rodando
+                    # Timeout para verificar se ainda está rodando, evitando travamento
                     self.server_socket.settimeout(1.0)
                     
                     try:
-                        client_socket, client_address = self.server_socket.accept()
+                        client_socket, _ = self.server_socket.accept()
                     except socket.timeout:
                         continue  # Continua o loop para verificar self.running
                     
@@ -73,9 +82,9 @@ class Clock:
                         data = client_socket.recv(1024)
                         if data:
                             message = data.decode().strip()
-                            self.handle_message(message)
+                            self._handle_message(message)
                     except Exception as e:
-                        print(f"Erro ao processar mensagem: {e}")
+                        print(f"[Clock] Erro ao processar mensagem: {e}")
                     finally:
                         client_socket.close()
                         
@@ -92,38 +101,43 @@ class Clock:
                 print("Clock: Servidor encerrado")
     
     def start_clock_loop(self):
-        """Loop principal do clock - incrementa e envia para os outros"""
+        """
+            Loop principal do clock, a cada repetição incrementa em uma unidade o valor atual 
+            do clock e comunica o Emissor e Escalonador.
+        """
         print("Clock: Loop principal iniciado!")
         
-        # Aguarda um pouco para os outros servidores subirem
+        # Aguarda os outros servidores (EMISSOR e ESCALAONADOR) subirem
         time.sleep(1)
         
         while self.running:
-            print(f"Clock: {self.current_clock}")
+            #print(f"Clock: {self.current_clock}")
             
-            # 1. Envia para EMISSOR primeiro
+            # Envia para EMISSOR primeiro
             self._send_to_emissor()
             
-            # 2. Espera 5ms
+            # Espera 5ms
             time.sleep(self.emissor_escalonador_delay / 1000.0)
             
-            # 3. Envia para ESCALONADOR
+            # Envia para ESCALONADOR
             self._send_to_escalonador()
             
-            # Se recebeu FIM, para o loop
+            # Se recebeu "FIM", para o loop
             if not self.running:
                 break
                 
-            # 4. Incrementa clock
+            # Incrementa clock
             self.current_clock += 1
             
-            # 5. Espera 100ms para próximo ciclo
+            # Espera 100ms para iniciar próximo ciclo
             time.sleep(self.clock_delay / 1000.0)
             
         print("Clock: Loop principal encerrado.")
     
     def start_clock(self):
-        """Inicia o Clock com servidor e loop principal em threads separadas"""
+        """
+            Inicia o Clock com servidor e loop principal em threads separadas
+        """
         print("Clock: Iniciando...")
         
         # Inicia servidor em thread separada

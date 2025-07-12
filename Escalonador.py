@@ -1,9 +1,5 @@
 import socket
 import json
-import threading
-import time
-import math
-from collections import deque
 from Task import Task
 
 class Escalonador:
@@ -371,21 +367,21 @@ class Escalonador:
             
             # Cria conteúdo do arquivo
             output_lines = []
-            output_lines.append(f"=== RESULTADOS DA SIMULAÇÃO ===")
+            output_lines.append(f"=== RESULTADOS DA SIMULACAO ===")
             output_lines.append(f"Algoritmo: {self.algorithm.upper()}")
-            output_lines.append(f"Número de tarefas: {num_tasks}")
-            output_lines.append(f"Tempo total de simulação: {self.current_clock}")
+            output_lines.append(f"Numero de tarefas: {num_tasks}")
+            output_lines.append(f"Tempo total de simulacao: {self.current_clock}")
             output_lines.append("")
             
             # Timeline de execução
-            output_lines.append("Timeline de execução:")
+            output_lines.append("Timeline de execucao:")
             timeline_str = " | ".join(str(item) for item in self.execution_timeline)
             output_lines.append(timeline_str)
             output_lines.append("")
             
             # Estatísticas das tarefas
-            output_lines.append("Estatísticas das tarefas:")
-            output_lines.append("ID | Chegada | Burst | Início | Fim | Wait | Turnaround | Response")
+            output_lines.append("Estatisticas das tarefas:")
+            output_lines.append("ID | Chegada | Burst | Inicio | Fim | Wait | Turnaround | Response")
             for task in self.finished_tasks:
                 wait_time = task.start_time - task.arrival_time
                 turnaround_time = task.finish_time - task.arrival_time
@@ -393,20 +389,20 @@ class Escalonador:
                 output_lines.append(f"{task.task_id} | {task.arrival_time} | {task.burst_time} | {task.start_time} | {task.finish_time} | {wait_time} | {turnaround_time} | {response_time}")
             
             output_lines.append("")
-            output_lines.append("Médias:")
-            output_lines.append(f"Tempo médio de espera: {avg_wait_time:.2f}")
-            output_lines.append(f"Tempo médio de turnaround: {avg_turnaround_time:.2f}")
-            output_lines.append(f"Tempo médio de resposta: {avg_response_time:.2f}")
+            output_lines.append("Medias:")
+            output_lines.append(f"Tempo medio de espera: {avg_wait_time:.2f}")
+            output_lines.append(f"Tempo medio de turnaround: {avg_turnaround_time:.2f}")
+            output_lines.append(f"Tempo medio de resposta: {avg_response_time:.2f}")
             
             # Salva arquivo
             filename = f"resultado_{self.algorithm}.txt"
             with open(filename, 'w') as f:
                 f.write('\n'.join(output_lines))
             
-            print(f"Escalonador: Arquivo de saída gerado: {filename}")
+            print(f"Escalonador: Arquivo de saida gerado: {filename}")
             
         except Exception as e:
-            print(f"Erro ao gerar arquivo de saída: {e}")
+            print(f"Erro ao gerar arquivo de saida: {e}")
 
     def start_server(self):
         """Inicia o servidor do Escalonador para receber mensagens"""

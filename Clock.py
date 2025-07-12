@@ -55,7 +55,7 @@ class Clock:
         else:
             print(f"Clock: Mensagem desconhecida recebida: {message}")
     
-    def start_server(self):
+    def _start_server(self):
         """
             Inicia o socket do Clock e aguarda conexões
         """
@@ -100,7 +100,7 @@ class Clock:
                 self.server_socket.close()
                 print("Clock: Servidor encerrado")
     
-    def start_clock_loop(self):
+    def _start_clock_loop(self):
         """
             Loop principal do clock, a cada repetição incrementa em uma unidade o valor atual 
             do clock e comunica o Emissor e Escalonador.
@@ -141,14 +141,14 @@ class Clock:
         print("Clock: Iniciando...")
         
         # Inicia servidor em thread separada
-        server_thread = threading.Thread(target=self.start_server, daemon=True)
+        server_thread = threading.Thread(target=self._start_server, daemon=True)
         server_thread.start()
         
         # Aguarda servidor subir
         time.sleep(1)
         
         # Inicia loop principal na thread atual
-        self.start_clock_loop()
+        self._start_clock_loop()
         
         # Aguarda thread do servidor terminar
         server_thread.join(timeout=1)

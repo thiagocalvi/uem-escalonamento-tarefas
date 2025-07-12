@@ -23,16 +23,6 @@ class Emissor:
         self.all_tasks_emitted = False
         self.server_socket = None
             
-    def send_to_clock(self, message):
-        """Envia mensagem para o Clock"""
-        try:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-                sock.connect((self.host, self.port_clock))
-                sock.send(message.encode())
-                print(f"Emissor: Mensagem enviada ao Clock: {message}")
-        except Exception as e:
-            print(f"Erro ao enviar mensagem ao Clock: {e}")
-            
     def send_task_to_escalonador(self, task):
         """Envia uma tarefa para o Escalonador"""
         try:

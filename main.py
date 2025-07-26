@@ -12,86 +12,38 @@ from Emissor import Emissor
 from Escalonador import Escalonador
 
 # Configurações
-HOST: str = '127.0.0.1'
-PORT_CLOCK: int = 4000
-PORT_EMISSOR: int = 4001
-PORT_ESCALONADOR: int = 4002
-CLOCK_DELAY_MS: int = 100
-EMISSOR_ESCALONADOR_DELAY_MS: int = 5
+HOST: str = '127.0.0.1' # Endereço localhost
+PORT_CLOCK: int = 4000 # Porta do Clock
+PORT_EMISSOR: int = 4001 # Porta do Emissor de Tarefas 
+PORT_ESCALONADOR: int = 4002 # Porta do Escalonador de Tarefas 
+CLOCK_DELAY_MS: int = 100 # Delay do clock em milissegundos 
+EMISSOR_ESCALONADOR_DELAY_MS: int = 5 # Atraso entre o envio para Emissor e Escalonador 
 
-# Lista global de processos para cleanup
+# Lista global de processos
 processes = []
 
-def read_tasks_from_file(file_path: str) -> list[Task]:
+def read_tasks_from_file(file_path) -> list[Task]:
     """
-    Lê o arquivo de texto contendo as tarefas.
+    Lê o arquivo de texto "file_path".txt contendo as tarefas, uma em cada linha, no formato t0;0;6;2
+    e retorna uma fila de objetos Task.
     
     Args:
         file_path (str): Caminho para o arquivo txt contendo as tarefas.
     Returns:
-        list[Task]: Lista de objetos Task representando as tarefas lidas do arquivo.
+        list[Task]: Fila de objetos Task representando as tarefas lidas do arquivo.
     """
     tasks: list[Task] = []
     
-    try:
-        file_path = Path(file_path)
-        if not file_path.exists():
-            print(f"Erro: Arquivo '{file_path}' não encontrado.")
-            return []
-        
-        with open(file_path, 'r', encoding='utf-8') as file:
-            for line_num, line in enumerate(file, 1):
-                line = line.strip()
-                if not line or line.startswith('#'):  # Pula linhas vazias e comentários
-                    continue
-                    
-                parts = line.split(';')
-                if len(parts) == 4:
-                    try:
-                        # Extrai o número do ID da tarefa (t0 -> 0, t1 -> 1, etc.)
-                        task_id_str = parts[0].strip()
-                        if task_id_str.startswith('t'):
-                            task_id = int(task_id_str[1:])
-                        else:
-                            task_id = int(task_id_str)
-                            
-                        arrival_time = int(parts[1].strip())
-                        burst_time = int(parts[2].strip())
-                        priority = int(parts[3].strip())
-                        
-                        # Validações básicas
-                        if arrival_time < 0 or burst_time <= 0 or priority < 1:
-                            print(f"Aviso: Valores inválidos na linha {line_num}: {line}")
-                            continue
-                            
-                        task = Task(task_id, arrival_time, burst_time, priority)
-                        tasks.append(task)
-                        
-                    except ValueError as e:
-                        print(f"Erro ao processar linha {line_num}: {line} - {e}")
-                        continue
-                else:
-                    print(f"Formato inválido na linha {line_num}: {line}")
-                    print("Formato esperado: id;arrival_time;burst_time;priority")
-                    
-    except FileNotFoundError:
-        print(f"Erro: Arquivo '{file_path}' não encontrado.")
-        return []
-    except PermissionError:
-        print(f"Erro: Sem permissão para ler o arquivo '{file_path}'.")
-        return []
-    except Exception as e:
-        print(f"Erro inesperado ao ler arquivo '{file_path}': {e}")
-        return []
-    
-    if not tasks:
-        print("Nenhuma tarefa válida encontrada no arquivo.")
-        return []
-    
-    # Ordena tarefas por tempo de chegada
-    tasks.sort(key=lambda t: t.arrival_time)
-    
-    print(f"Sucesso: {len(tasks)} tarefa(s) carregada(s) do arquivo '{file_path}'")
+    with open(file_path, 'r') as file:
+        for line in file:
+            parts = line.strip().split(';')
+            if len(parts) == 4:
+                task_id = int(parts[0][1])
+                arrival_time = int(parts[1].strip())
+                burst_time = int(parts[2].strip())
+                priority = int(parts[3].strip())
+                task = Task(task_id, arrival_time, burst_time, priority)
+                tasks.append(task)
     return tasks
 
 def signal_handler(signum, frame):
@@ -153,7 +105,7 @@ def run_escalonador_process(host, port_escalonador, port_clock, port_emissor, al
     """Função para executar o processo do Escalonador"""
     try:
         print(f"[ESCALONADOR] Iniciando processo do Escalonador (PID: {os.getpid()})")
-        escalonador = Escalonador(host, port_escalonador, port_clock, port_emissor, algorithm)  # ADICIONAR port_emissor
+        escalonador = Escalonador(host, port_escalonador, port_clock, port_emissor, algorithm)
         escalonador.start_server()
         print(f"[ESCALONADOR] Processo finalizado normalmente")
     except KeyboardInterrupt:
@@ -161,21 +113,6 @@ def run_escalonador_process(host, port_escalonador, port_clock, port_emissor, al
     except Exception as e:
         print(f"[ESCALONADOR] Erro no processo do Escalonador: {e}")
 
-def validate_ports():
-    """Valida se as portas estão disponíveis"""
-    import socket
-    
-    ports = [PORT_CLOCK, PORT_EMISSOR, PORT_ESCALONADOR]
-    
-    for port in ports:
-        try:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-                sock.bind((HOST, port))
-        except OSError as e:
-            print(f"Erro: Porta {port} não está disponível: {e}")
-            return False
-    
-    return True
 
 def print_task_summary(tasks):
     """Imprime resumo das tarefas carregadas"""
@@ -191,7 +128,9 @@ def print_task_summary(tasks):
     print(f"Tempo total simulado estimado: {max(task.arrival_time + task.burst_time for task in tasks)}")
 
 def main():
-    """Função principal que inicia a simulação com processos separados."""
+    """
+        Função principal que inicia a simulação
+    """
     
     global processes
     
@@ -245,11 +184,6 @@ def main():
 
     print(f"\nAlgoritmo selecionado: {algorithm.upper()} ({valid_algorithms[algorithm]})")
     
-    # Valida se as portas estão disponíveis
-    if not validate_ports():
-        print("Erro: Algumas portas não estão disponíveis. Verifique se não há outros processos rodando.")
-        sys.exit(1)
-    
     # Lê as tarefas
     tasks: list[Task] = read_tasks_from_file(tasks_file)
     if not tasks:
@@ -262,7 +196,7 @@ def main():
     print("\n=== INICIANDO SIMULAÇÃO ===")
     
     try:
-        # Inicia o processo do Escalonador primeiro (servidor)
+        # Inicia o processo do Escalonador primeiro
         escalonador_process = multiprocessing.Process(
             target=run_escalonador_process,
             args=(HOST, PORT_ESCALONADOR, PORT_CLOCK, PORT_EMISSOR, algorithm),
@@ -270,10 +204,10 @@ def main():
         )
         escalonador_process.start()
         processes.append(escalonador_process)
-        print(f"✓ Processo Escalonador iniciado (PID: {escalonador_process.pid})")
+        print(f"Processo Escalonador iniciado (PID: {escalonador_process.pid})")
         time.sleep(1)  # Aguarda o servidor subir
         
-        # Inicia o processo do Emissor (servidor)
+        # Inicia o processo do Emissor
         emissor_process = multiprocessing.Process(
             target=run_emissor_process,
             args=(HOST, PORT_EMISSOR, PORT_ESCALONADOR, PORT_CLOCK, tasks),
@@ -281,10 +215,10 @@ def main():
         )
         emissor_process.start()
         processes.append(emissor_process)
-        print(f"✓ Processo Emissor iniciado (PID: {emissor_process.pid})")
+        print(f"Processo Emissor iniciado (PID: {emissor_process.pid})")
         time.sleep(1)  # Aguarda o servidor subir
         
-        # Inicia o processo do Clock (cliente)
+        # Inicia o processo do Clock
         clock_process = multiprocessing.Process(
             target=run_clock_process,
             args=(HOST, PORT_CLOCK, PORT_EMISSOR, PORT_ESCALONADOR, CLOCK_DELAY_MS, EMISSOR_ESCALONADOR_DELAY_MS),
@@ -292,32 +226,30 @@ def main():
         )
         clock_process.start()
         processes.append(clock_process)
-        print(f"✓ Processo Clock iniciado (PID: {clock_process.pid})")
+        print(f"Processo Clock iniciado (PID: {clock_process.pid})")
         time.sleep(1)  # Aguarda o servidor subir
         
-        print("\n✓ Todos os processos iniciados com sucesso!")
-        print("✓ Simulação em andamento...")
+        print("\nTodos os processos iniciados com sucesso!")
+        print("Simulação em andamento...")
         print("  (Pressione Ctrl+C para interromper)")
         
         # Aguarda todos os processos terminarem
         for process in processes:
             process.join()
             exit_code = process.exitcode
-            status = "✓ Sucesso" if exit_code == 0 else f"✗ Código {exit_code}"
+            status = "Sucesso" if exit_code == 0 else f"Código {exit_code}"
             print(f"  {process.name} (PID: {process.pid}): {status}")
         
         print("\n=== SIMULAÇÃO CONCLUÍDA ===")
         
     except KeyboardInterrupt:
-        print("\n⚠ Interrupção detectada pelo usuário.")
+        print("\nInterrupção detectada pelo usuário.")
         cleanup_processes(processes)
         
     except Exception as e:
-        print(f"\n✗ Erro durante a simulação: {e}")
+        print(f"\nErro durante a simulação: {e}")
         cleanup_processes(processes)
         sys.exit(1)
 
 if __name__ == "__main__":
-    # Necessário para multiprocessing no Windows
-    multiprocessing.set_start_method('spawn', force=True)
     main()

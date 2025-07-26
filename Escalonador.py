@@ -293,7 +293,7 @@ class Escalonador:
             if not self.current_task.has_started:
                 self.start_task_execution()
 
-            self.apply_aging()
+                self.apply_aging()
             
     
 

@@ -68,10 +68,7 @@ class Clock:
             print(f"Clock: Servidor iniciado em {self.host}:{self.port_clock}")
             
             while self.running:
-                try:
-                    # Timeout para verificar se ainda está rodando, evitando travamento
-                    self.server_socket.settimeout(1.0)
-                    
+                try:                
                     try:
                         client_socket, _ = self.server_socket.accept()
                     except socket.timeout:
@@ -107,11 +104,7 @@ class Clock:
         """
         print("Clock: Loop principal iniciado!")
         
-        # Aguarda os outros servidores (EMISSOR e ESCALAONADOR) subirem
-        time.sleep(1)
-        
         while self.running:
-            #print(f"Clock: {self.current_clock}")
             
             # Envia para EMISSOR primeiro
             self._send_to_emissor()

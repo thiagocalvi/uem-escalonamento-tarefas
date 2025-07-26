@@ -22,16 +22,7 @@ class Emissor:
         self.current_clock = 0
         self.all_tasks_emitted = False
         self.server_socket = None
-            
-    def send_to_clock(self, message):
-        """Envia mensagem para o Clock"""
-        try:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-                sock.connect((self.host, self.port_clock))
-                sock.send(message.encode())
-                print(f"Emissor: Mensagem enviada ao Clock: {message}")
-        except Exception as e:
-            print(f"Erro ao enviar mensagem ao Clock: {e}")
+
             
     def send_task_to_escalonador(self, task):
         """Envia uma tarefa para o Escalonador"""
@@ -102,12 +93,15 @@ class Emissor:
         self.check_and_emit_tasks()
         
     def start_server(self):
-        """Inicia o servidor do Emissor para receber mensagens do Clock"""
+        """
+            Inicia o servidor do Emissor para receber mensagens do Clock
+        """
+
         try:
-            self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            self.server_socket.bind((self.host, self.port_emissor))
-            self.server_socket.listen(5)
+            self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # Cria o socket do Emissor
+            self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) # Manter durante o desenvolvimento
+            self.server_socket.bind((self.host, self.port_emissor)) # Vincula o socket ao host e porta
+            self.server_socket.listen(5) # Máximo de conexões pendentes
             
             print(f"Emissor: Servidor iniciado em {self.host}:{self.port_emissor}")
             

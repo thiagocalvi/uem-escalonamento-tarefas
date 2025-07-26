@@ -152,9 +152,6 @@ class Escalonador:
         # 3. Executa tarefa atual
         if self.current_task:
             self.execute_current_task()
-        else:
-            self.execution_timeline.append("idle")
-            print("Escalonador: CPU idle")
         
     def execute_rr(self):
         """Executa algoritmo Round Robin"""
@@ -183,24 +180,6 @@ class Escalonador:
             self.current_quantum += 1
             
     def execute_sjf(self):
-        # """Executa algoritmo Shortest Job First"""
-        # # 1. Verifica se tarefa atual terminou
-        # if self.current_task and self.current_task.remaining_time <= 0:
-        #     self.finish_current_task()
-        
-        # # 2. Seleciona próxima tarefa (menor burst time)
-        # if not self.current_task and self.ready_queue:
-        #     self.current_task = min(self.ready_queue, key=lambda t: t.burst_time)
-        #     self.ready_queue.remove(self.current_task)
-        #     self.start_task_execution()
-        
-        # # 3. Executa tarefa atual
-        # if self.current_task:
-        #     self.execute_current_task()
-        # else:
-        #     self.execution_timeline.append("idle")
-        #     print("Escalonador: CPU idle")
-
         """Executa algoritmo Shortest Job First"""
         # 1. Verifica se tarefa atual terminou
         if self.current_task and self.current_task.remaining_time <= 0:
@@ -216,36 +195,6 @@ class Escalonador:
         self.execute_current_task()
         
     def execute_srtf(self):
-        # """Executa algoritmo Shortest Remaining Time First"""
-        # # 1. Verifica se tarefa atual terminou
-        # if self.current_task and self.current_task.remaining_time <= 0:
-        #     self.finish_current_task()
-        #     return  # Sai para não executar no mesmo clock
-        
-        # # 2. Verifica preempção por menor tempo restante
-        # if self.current_task and self.ready_queue:
-        #     shortest_ready = min(self.ready_queue, key=lambda t: t.remaining_time)
-        #     if shortest_ready.remaining_time < self.current_task.remaining_time:
-        #         print(f"Escalonador: Preempção SRTF: t{shortest_ready.task_id}({shortest_ready.remaining_time}) preempta t{self.current_task.task_id}({self.current_task.remaining_time})")
-        #         self.ready_queue.append(self.current_task)
-        #         self.ready_queue.remove(shortest_ready)
-        #         self.current_task = shortest_ready
-        #         if not self.current_task.has_started:
-        #             self.start_task_execution()
-        
-        # # 3. Seleciona próxima tarefa se não há tarefa executando
-        # if not self.current_task and self.ready_queue:
-        #     self.current_task = min(self.ready_queue, key=lambda t: t.remaining_time)
-        #     self.ready_queue.remove(self.current_task)
-        #     self.start_task_execution()
-        
-        # # 4. Executa tarefa atual
-        # if self.current_task:
-        #     self.execute_current_task()
-        # else:
-        #     self.execution_timeline.append("idle")
-        #     print("Escalonador: CPU idle")
-        
         """Executa algoritmo Shortest Remaining Time First"""
         # 1. Verifica se tarefa atual terminou
         if self.current_task and self.current_task.remaining_time <= 0:
@@ -284,9 +233,6 @@ class Escalonador:
         # 3. Executa tarefa atual
         if self.current_task:
             self.execute_current_task()
-        else:
-            self.execution_timeline.append("idle")
-            print("Escalonador: CPU idle")
         
     def execute_priop(self):
         """Executa algoritmo de Prioridades Fixas Preemptivo"""

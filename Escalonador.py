@@ -261,65 +261,72 @@ class Escalonador:
     def execute_priod(self):
         """Executa algoritmo de Prioridades Dinâmicas"""
         print(f'Tarefas na fila de prontas (id , prioridade dinamica): {[(t.task_id, t.dynamic_priority) for t in self.ready_queue]}')
+        
         # Verifica se tarefa terminou
         if self.current_task and self.current_task.remaining_time <= 0:
             self.finish_current_task()
+            if not self.ready_queue:
+                return
+            self.apply_aging()
+            
+            self.current_task = min(self.ready_queue, key=lambda t: (t.dynamic_priority, t.arrival_time)) # Seleciona a tarefa com maior prioridade dinâmica
+            self.ready_queue.remove(self.current_task) # Remove da fila de prontas
+            self.current_task.dynamic_priority = self.current_task.original_priority # Restaura prioridade original
+            
+            if not self.current_task.has_started:
+                self.start_task_execution()
+                self.apply_aging()
         
         # Seleciona próxima tarefa se não há tarefa executando
-        if not self.current_task and self.ready_queue:
+        elif not self.current_task and self.ready_queue:
         
-            self.current_task = min(self.ready_queue, key=lambda t: (t.dynamic_priority, t.arrival_time))
-            print(f'Tarefa selecionada (id , prioridade dinamica): {self.current_task.task_id}: Dinamica {self.current_task.dynamic_priority}')
-            self.ready_queue.remove(self.current_task)
+            self.current_task = min(self.ready_queue, key=lambda t: (t.dynamic_priority, t.arrival_time)) # Seleciona a tarefa com maior prioridade dinâmica
+            
+            print(f'Tarefa selecionada para execução: id:{self.current_task.task_id} , Pd: {self.current_task.dynamic_priority}')
+            
+            self.ready_queue.remove(self.current_task) # Remove da fila de prontas
 
-            self.current_task.dynamic_priority = self.current_task.original_priority
+            self.current_task.dynamic_priority = self.current_task.original_priority # Restaura prioridade original
 
-            print(f'Tarefa selecionada (id ,original prioridade dinamica): {self.current_task.task_id}, {self.current_task.dynamic_priority}')
             print(f'Tarefas na fila de prontas (id , prioridade dinamica): {[(t.task_id, t.dynamic_priority) for t in self.ready_queue]}')
 
             if not self.current_task.has_started:
                 self.start_task_execution()
-            #print(f'Tarefa selecionadas {self.current_task.task_id}: Dinamica {self.current_task.dynamic_priority}')
 
-            #print(f'tarefas na fila: {[(t.task_id, t.dynamic_priority) for t in self.ready_queue]}')
-        else:
-            # Verifica preempção por prioridade (dinâmica)
-            if self.current_task and self.ready_queue:
-                # Encontra a tarefa com maior prioridade na fila (menor valor = maior prioridade)
-                # Em caso de empate, usa arrival_time como critério de desempate
-                highest_priority = min(self.ready_queue, key=lambda t: (t.dynamic_priority, t.arrival_time))
-                print(f'Tarefa selecionada (id , prioridade dinamica): {self.current_task.task_id}, {self.current_task.dynamic_priority}')
-                if highest_priority.dynamic_priority < self.current_task.dynamic_priority:
-                    print(f"Escalonador: Preempção dinâmica: t{highest_priority.task_id}(prio={highest_priority.dynamic_priority}) preempta t{self.current_task.task_id}(prio={self.current_task.dynamic_priority})")
-                    print(f'tarefas na fila: {[(t.task_id, t.dynamic_priority) for t in self.ready_queue]}')
-
-                    self.ready_queue.remove(highest_priority)
-
-                    self.current_task.dynamic_priority = self.current_task.original_priority
-
-                    self.ready_queue.append(self.current_task)
-
-                    self.current_task = highest_priority
-
-                    self.current_task.dynamic_priority = highest_priority.original_priority
-                    print(f'Tarefas na fila de prontas (id , prioridade dinamica): {[(t.task_id, t.dynamic_priority) for t in self.ready_queue]}')
-                    if not self.current_task.has_started:
-                        self.start_task_execution()
+            self.apply_aging()
+            
     
-        
-        # 4. Executa tarefa atual
+
+            # Verifica preempção por prioridade (dinâmica)
+        elif self.current_task and self.ready_queue:
+            # Encontra a tarefa com maior prioridade na fila (menor valor = maior prioridade)
+            # Em caso de empate, usa arrival_time como critério de desempate
+            highest_priority = min(self.ready_queue, key=lambda t: (t.dynamic_priority, t.arrival_time))
+            print(f'Tarefa selecionada (id , prioridade dinamica): {self.current_task.task_id}, {self.current_task.dynamic_priority}')
+            
+            if highest_priority.dynamic_priority < self.current_task.dynamic_priority:
+                print(f"Escalonador: Preempção dinâmica: t{highest_priority.task_id}(prio={highest_priority.dynamic_priority}) preempta t{self.current_task.task_id}(prio={self.current_task.dynamic_priority})")
+                print(f'tarefas na fila: {[(t.task_id, t.dynamic_priority) for t in self.ready_queue]}')
+                self.ready_queue.remove(highest_priority)
+                self.current_task.dynamic_priority = self.current_task.original_priority
+                self.ready_queue.append(self.current_task)
+                self.current_task = highest_priority
+                self.current_task.dynamic_priority = highest_priority.original_priority
+                print(f'Tarefas na fila de prontas (id , prioridade dinamica): {[(t.task_id, t.dynamic_priority) for t in self.ready_queue]}')
+                if not self.current_task.has_started:
+                    self.start_task_execution()
+
         if self.current_task:
             self.execute_current_task()
+
         
-        self.apply_aging()
-            
+    
+
+
+
     def start_task_execution(self):
         """Inicia a execução de uma tarefa"""
         if self.current_task and not self.current_task.has_started:
-            # Garante que dynamic_priority existe (para compatibilidade)
-            # if not hasattr(self.current_task, 'dynamic_priority'):
-            #     self.current_task.dynamic_priority = self.current_task.priority
-            
             self.current_task.start_time = self.current_clock
             self.current_task.response_time = self.current_clock - self.current_task.arrival_time
             self.current_task.has_started = True

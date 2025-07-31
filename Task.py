@@ -20,5 +20,4 @@ class Task:
         # Campos para estatísticas
         self.start_time = None  # Quando começou a executar
         self.finish_time = None  # Quando terminou
-        self.response_time = None  # Tempo de resposta
         self.has_started = False  # Se já começou a executar

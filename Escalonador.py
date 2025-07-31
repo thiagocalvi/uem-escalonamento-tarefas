@@ -5,78 +5,87 @@ from Task import Task
 class Escalonador:
     def __init__(self, host: str, port_escalonador: int, port_clock: int, port_emissor: int, algorithm: str):
         """
-            Inicializa o Escalonador.
-            Args:
-                host (str): Endereço do host
-                port_escalonador (int): Porta do Escalonador
-                port_clock (int): Porta do Clock
-                algorithm (str): Algoritmo de escalonamento
+        Inicializa o Escalonador de tarefas.
+        
+        Args:
+            host (str): Endereço IP do servidor
+            port_escalonador (int): Porta do servidor do Escalonador
+            port_clock (int): Porta do servidor do Clock
+            port_emissor (int): Porta do servidor do Emissor
+            algorithm (str): Algoritmo de escalonamento a ser executado
+                           (fcfs, rr, sjf, srtf, prioc, priop, priod)
         """
+        # Configurações de rede
         self.host = host
         self.port_escalonador = port_escalonador
         self.port_clock = port_clock
         self.port_emissor = port_emissor
         self.algorithm = algorithm
         
-        self.ready_queue = []  # Fila de tarefas prontas
-        self.finished_tasks = []  # Tarefas finalizadas
-        self.current_task = None  # Tarefa atualmente em execução
-        self.current_clock = 0
-        self.all_tasks_emitted = False
-        self.simulation_finished = False
-        self.server_socket = None
+        # Estado da simulação
+        self.ready_queue = []              # Fila de tarefas prontas para execução
+        self.finished_tasks = []           # Lista de tarefas já finalizadas
+        self.current_task = None           # Tarefa atualmente em execução
+        self.current_clock = 0             # Clock atual da simulação
+        self.all_tasks_emitted = False     # Flag indicando se todas as tarefas foram emitidas
+        self.simulation_finished = False   # Flag indicando se a simulação terminou
+        self.server_socket = None          # Socket do servidor
         
-        # Para controle de execução
-        self.execution_timeline = []  # Timeline de execução
-        self.quantum = 3  # Quantum para Round Robin
-        self.current_quantum = 0  # Quantum atual da tarefa em execução
+        # Controle de execução e resultados
+        self.execution_timeline = []       # Timeline completo da execução (para relatório)
+        self.quantum = 3                   # Quantum fixo para Round Robin
+        self.current_quantum = 0           # Contador do quantum atual
+           
+        # Sincronização com clock - garante ordem correta das operações
+        self.pending_tasks = []            # Tarefas recebidas aguardando processamento no próximo clock
+        self.pending_all_tasks_emitted = False  # Sinal de fim de emissão aguardando processamento
         
-        # Para algoritmos de prioridade dinâmica
-        self.aging_counter = 0
-        
-        # Para controle de sincronização com clock
-        self.pending_tasks = []  # Tarefas recebidas aguardando próximo clock
-        self.pending_all_tasks_emitted = False  # Flag para ALL_TASKS_EMITTED pendente
-        
-        # Mapeamento de algoritmos para funções
+        # Mapeamento de algoritmos para suas respectivas funções de execução
         self.algorithm_map = {
-            'fcfs': self.execute_fcfs,
-            'rr': self.execute_rr,
-            'sjf': self.execute_sjf,
-            'srtf': self.execute_srtf,
-            'prioc': self.execute_prioc,
-            'priop': self.execute_priop,
-            'priod': self.execute_priod
+            'fcfs': self.execute_fcfs,    # First-Come, First-Served
+            'rr': self.execute_rr,        # Round Robin
+            'sjf': self.execute_sjf,      # Shortest Job First
+            'srtf': self.execute_srtf,    # Shortest Remaining Time First
+            'prioc': self.execute_prioc,  # Priority Cooperative
+            'priop': self.execute_priop,  # Priority Preemptive
+            'priod': self.execute_priod   # Priority Dynamic
         }
 
     def execute_scheduling(self):
         """
-            Executa o algoritmo de escalonamento selecionado
+        Executa o algoritmo de escalonamento selecionado.
+        Utiliza o mapeamento para chamar a função correspondente.
         """
         self.algorithm_map[self.algorithm]()
 
     def handle_client(self, client_socket):
         """
-            Processa mensagens recebidas - apenas armazena, execução acontece no clock
+        Processa mensagens recebidas via socket.
+        
+        Implementa sincronização: apenas armazena mensagens para processamento
+        quando o próximo clock for recebido, garantindo ordem correta das operações.
+        
+        Args:
+            client_socket: Socket do cliente que enviou a mensagem
         """
         try:
             data = client_socket.recv(1024)
             if data:
                 message = data.decode()
                 
-                # Verifica se é mensagem do Clock (número simples)
+                # Verifica se é mensagem do Clock (formato: número simples)
                 if message.isdigit():
                     self.handle_clock_message(int(message))
 
                 elif message.startswith("{") and message.endswith("}"):
-                    # Mensagem JSON do Emissor - apenas armazena para processar no próximo clock
+                    # Mensagem JSON do Emissor - armazena para processamento no próximo clock
                     try:
                         json_data = json.loads(message)
                         if json_data.get('type') == 'TASK':
-                            # Armazena tarefa para processar no próximo clock
+                            # Nova tarefa recebida - armazena para processar no próximo clock
                             self.pending_tasks.append(json_data)
                         elif json_data.get('type') == 'ALL_TASKS_EMITTED':
-                            # Armazena flag para processar no próximo clock
+                            # Sinal de fim de emissão - armazena para processar no próximo clock
                             self.pending_all_tasks_emitted = True
                     except json.JSONDecodeError:
                         print(f"Erro ao decodificar JSON: {message}")
@@ -87,7 +96,9 @@ class Escalonador:
             client_socket.close()
 
     def handle_new_task(self, task_data):
-        """Processa nova tarefa recebida do Emissor"""
+        """
+        Processa nova tarefa recebida do Emissor
+        """
         task = Task(
             task_data['id'],
             task_data['arrival_time'],
@@ -99,7 +110,6 @@ class Escalonador:
         task.start_time = None
         task.finish_time = None
         task.remaining_time = task.burst_time  # IMPORTANTE: Inicializar remaining_time
-        task.response_time = None
         task.original_priority = task.priority
         task.has_started = False
         task.dynamic_priority = task.priority
@@ -110,12 +120,16 @@ class Escalonador:
         print(f"Escalonador: Tarefa {task.task_id} adicionada à fila (clock={self.current_clock})")
         
     def handle_all_tasks_emitted(self):
-        """Processa sinal de que todas as tarefas foram emitidas"""
+        """
+        Processa sinal de que todas as tarefas foram emitidas
+        """
         self.all_tasks_emitted = True
         print("Escalonador: Todas as tarefas foram emitidas")
         
     def handle_clock_message(self, clock_value):
-        """Processa mensagem de clock e executa operações pendentes"""
+        """
+        Processa mensagem de clock e executa operações pendentes
+        """
         self.current_clock = clock_value
         print(f"Escalonador: Recebido clock {self.current_clock}")
         
@@ -137,70 +151,73 @@ class Escalonador:
             self.finish_simulation()
     
     def execute_fcfs(self):
-        """Executa algoritmo First-Come, First-Served"""
-        # 1. Verifica se tarefa atual terminou
-        if self.current_task and self.current_task.remaining_time == 0:
+        """
+        Executa algoritmo First-Come, First-Served
+        """
+        # Verifica se tarefa atual terminou
+        if self.current_task and self.current_task.remaining_time <= 0:
             self.finish_current_task()
         
-        # 2. Seleciona próxima tarefa (primeira da fila por arrival_time)
+        # Seleciona próxima tarefa (primeira da fila por arrival_time)
         if not self.current_task and self.ready_queue:
-            # Ordena por arrival_time para garantir FCFS
-            #self.ready_queue.sort(key=lambda t: t.arrival_time)
             self.current_task = self.ready_queue.pop(0)
             self.start_task_execution()
         
-        # 3. Executa tarefa atual
+        # Executa tarefa atual
         if self.current_task:
             self.execute_current_task()
         
     def execute_rr(self):
-        """Executa algoritmo Round Robin"""
-        # 1. Verifica se tarefa atual terminou
+        """
+        Executa algoritmo Round Robin
+        """
+        # Verifica se tarefa atual terminou
         if self.current_task and self.current_task.remaining_time <= 0:
             self.finish_current_task()
         
-        # 2. Verifica preempção por quantum
+        # Verifica preempção por quantum
         if self.current_task and self.current_quantum >= self.quantum:
             # Volta para o final da fila
             self.ready_queue.append(self.current_task)
             self.current_task = None
             self.current_quantum = 0
         
-        # 3. Seleciona próxima tarefa (FIFO para RR)
+        # Seleciona próxima tarefa (FIFO para RR)
         if not self.current_task and self.ready_queue:
-            # Ordena por arrival_time para manter ordem FIFO
-            #self.ready_queue.sort(key=lambda t: t.arrival_time)
             self.current_task = self.ready_queue.pop(0)
             self.start_task_execution()
             self.current_quantum = 0
         
-        # 4. Executa tarefa atual
-        self.execute_current_task()
+        # Executa tarefa atual 
         if self.current_task:
+            self.execute_current_task()
             self.current_quantum += 1
             
     def execute_sjf(self):
-        """Executa algoritmo Shortest Job First"""
-        # 1. Verifica se tarefa atual terminou
+        """
+        Executa algoritmo Shortest Job First
+        """
+        # Verifica se tarefa atual terminou
         if self.current_task and self.current_task.remaining_time <= 0:
             self.finish_current_task()
         
-        # 2. Seleciona próxima tarefa (menor burst time)
+        # Seleciona próxima tarefa (menor burst time)
         if not self.current_task and self.ready_queue:
             self.current_task = min(self.ready_queue, key=lambda t: t.burst_time)
             self.ready_queue.remove(self.current_task)
             self.start_task_execution()
         
-        # 3. Executa tarefa atual
-        self.execute_current_task()
-        
+        # Executa tarefa atual
+        if self.current_task:
+            self.execute_current_task()
+
     def execute_srtf(self):
         """Executa algoritmo Shortest Remaining Time First"""
-        # 1. Verifica se tarefa atual terminou
+        # Verifica se tarefa atual terminou
         if self.current_task and self.current_task.remaining_time <= 0:
             self.finish_current_task()
         
-        # 2. Verifica preempção por menor tempo restante
+        # Verifica preempção por menor tempo restante
         if self.current_task and self.ready_queue:
             shortest_ready = min(self.ready_queue, key=lambda t: t.remaining_time)
             if shortest_ready.remaining_time < self.current_task.remaining_time:
@@ -209,38 +226,43 @@ class Escalonador:
                 self.current_task = shortest_ready
                 self.start_task_execution()
         
-        # 3. Seleciona próxima tarefa (menor tempo restante)
-        if not self.current_task and self.ready_queue:
+        # Seleciona próxima tarefa (menor tempo restante)
+        elif not self.current_task and self.ready_queue:
             self.current_task = min(self.ready_queue, key=lambda t: t.remaining_time)
             self.ready_queue.remove(self.current_task)
             self.start_task_execution()
-        
-        # 4. Executa tarefa atual
-        self.execute_current_task()
-        
+
+        # Executa tarefa atual
+        if self.current_task:
+            self.execute_current_task()
+
     def execute_prioc(self):
-        """Executa algoritmo de Prioridades Fixas Cooperativo"""
-        # 1. Verifica se tarefa atual terminou
+        """
+        Executa algoritmo de Prioridades Fixas Cooperativo
+        """
+        # Verifica se tarefa atual terminou
         if self.current_task and self.current_task.remaining_time <= 0:
             self.finish_current_task()
         
-        # 2. Seleciona próxima tarefa (maior prioridade = menor número)
+        # Seleciona próxima tarefa (maior prioridade = menor número)
         if not self.current_task and self.ready_queue:
             self.current_task = min(self.ready_queue, key=lambda t: t.priority)
             self.ready_queue.remove(self.current_task)
             self.start_task_execution()
         
-        # 3. Executa tarefa atual
+        # Executa tarefa atual
         if self.current_task:
             self.execute_current_task()
         
     def execute_priop(self):
-        """Executa algoritmo de Prioridades Fixas Preemptivo"""
-        # 1. Verifica se tarefa atual terminou
+        """
+        Executa algoritmo de Prioridades Fixas Preemptivo
+        """
+        # Verifica se tarefa atual terminou
         if self.current_task and self.current_task.remaining_time <= 0:
             self.finish_current_task()
         
-        # 2. Verifica preempção por prioridade
+        # Verifica preempção por prioridade
         if self.current_task and self.ready_queue:
             highest_priority = min(self.ready_queue, key=lambda t: t.priority)
             if highest_priority.priority < self.current_task.priority:
@@ -249,23 +271,22 @@ class Escalonador:
                 self.current_task = highest_priority
                 self.start_task_execution()
         
-        # 3. Seleciona próxima tarefa (maior prioridade = menor número)
+        # Seleciona próxima tarefa (maior prioridade = menor número)
         if not self.current_task and self.ready_queue:
             self.current_task = min(self.ready_queue, key=lambda t: t.priority)
             self.ready_queue.remove(self.current_task)
             self.start_task_execution()
         
-        # 4. Executa tarefa atual
-        self.execute_current_task()
-        
+        # Executa tarefa atual
+        if self.current_task:
+            self.execute_current_task()
+
     def execute_priod(self):
         """Executa algoritmo de Prioridades Dinâmicas"""
-        print(f'Tarefas na fila de prontas (id , prioridade dinamica): {[(t.task_id, t.dynamic_priority) for t in self.ready_queue]}')
-        
         # Verifica se tarefa terminou
         if self.current_task and self.current_task.remaining_time <= 0:
             self.finish_current_task()
-            if not self.ready_queue:
+            if not self.ready_queue and self.all_tasks_emitted:
                 return
             self.apply_aging()
             
@@ -275,60 +296,44 @@ class Escalonador:
             
             if not self.current_task.has_started:
                 self.start_task_execution()
-                self.apply_aging()
         
         # Seleciona próxima tarefa se não há tarefa executando
         elif not self.current_task and self.ready_queue:
         
             self.current_task = min(self.ready_queue, key=lambda t: (t.dynamic_priority, t.arrival_time)) # Seleciona a tarefa com maior prioridade dinâmica
             
-            print(f'Tarefa selecionada para execução: id:{self.current_task.task_id} , Pd: {self.current_task.dynamic_priority}')
-            
             self.ready_queue.remove(self.current_task) # Remove da fila de prontas
 
             self.current_task.dynamic_priority = self.current_task.original_priority # Restaura prioridade original
 
-            print(f'Tarefas na fila de prontas (id , prioridade dinamica): {[(t.task_id, t.dynamic_priority) for t in self.ready_queue]}')
-
             if not self.current_task.has_started:
                 self.start_task_execution()
 
-                self.apply_aging()
+            self.apply_aging()
             
-    
-
             # Verifica preempção por prioridade (dinâmica)
         elif self.current_task and self.ready_queue:
             # Encontra a tarefa com maior prioridade na fila (menor valor = maior prioridade)
             # Em caso de empate, usa arrival_time como critério de desempate
             highest_priority = min(self.ready_queue, key=lambda t: (t.dynamic_priority, t.arrival_time))
-            print(f'Tarefa selecionada (id , prioridade dinamica): {self.current_task.task_id}, {self.current_task.dynamic_priority}')
             
             if highest_priority.dynamic_priority < self.current_task.dynamic_priority:
                 print(f"Escalonador: Preempção dinâmica: t{highest_priority.task_id}(prio={highest_priority.dynamic_priority}) preempta t{self.current_task.task_id}(prio={self.current_task.dynamic_priority})")
-                print(f'tarefas na fila: {[(t.task_id, t.dynamic_priority) for t in self.ready_queue]}')
                 self.ready_queue.remove(highest_priority)
                 self.current_task.dynamic_priority = self.current_task.original_priority
                 self.ready_queue.append(self.current_task)
                 self.current_task = highest_priority
                 self.current_task.dynamic_priority = highest_priority.original_priority
-                print(f'Tarefas na fila de prontas (id , prioridade dinamica): {[(t.task_id, t.dynamic_priority) for t in self.ready_queue]}')
                 if not self.current_task.has_started:
                     self.start_task_execution()
 
         if self.current_task:
             self.execute_current_task()
 
-        
-    
-
-
-
     def start_task_execution(self):
         """Inicia a execução de uma tarefa"""
         if self.current_task and not self.current_task.has_started:
             self.current_task.start_time = self.current_clock
-            self.current_task.response_time = self.current_clock - self.current_task.arrival_time
             self.current_task.has_started = True
             print(f"Escalonador: Iniciando execução da tarefa t{self.current_task.task_id} no clock {self.current_clock}")
             
@@ -355,7 +360,7 @@ class Escalonador:
         """Aplica aging para prioridade dinâmica"""        
         for task in self.ready_queue:
             task.dynamic_priority -= 1  # Aumenta prioridade dinâmica
-        print("Escalonador: Aging aplicado às tarefas")
+        print("Escalonador: Aging aplicado às tarefas no clock", self.current_clock)
     
     def send_end_signal_to_clock(self):
         """Envia sinal de FIM para o Clock"""
@@ -405,9 +410,7 @@ class Escalonador:
             import math
             
             # 1. LINHA 1: Timeline de execução separado por ";"
-            # Remove "idle" do timeline (só mostra tarefas executadas)
-            timeline_filtered = [item for item in self.execution_timeline if item != "idle"]
-            timeline_str = ";".join(timeline_filtered)
+            timeline_str = ";".join(self.execution_timeline)
             
             # 2. LINHAS DAS TAREFAS: ID;clock de ingresso na fila;clock de finalização;turnaround time;waiting time
             task_lines = []

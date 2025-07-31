@@ -47,6 +47,90 @@ Os componentes são:
 
 * **Linguagem de Programação:** Python 3.13.3 
 
-## 5. Discentes
+## 5. Como Executar
+
+### 5.1. Pré-requisitos
+
+* Python 3.x instalado no sistema
+* Sistema operacional Linux (testado) ou Windows
+* Arquivo de entrada com as tarefas (exemplo: `entrada00.txt`)
+
+### 5.2. Estrutura do Arquivo de Entrada
+
+O arquivo de entrada deve conter as tarefas no formato:
+```
+ID;tempo_chegada;tempo_execução;prioridade
+```
+
+Exemplo (`entrada00.txt`):
+```
+1;0;5;3
+2;0;2;2
+3;1;4;1
+4;3;1;1
+5;5;2;3
+```
+
+### 5.3. Execução do Programa
+
+1. **Navegue até o diretório do projeto:**
+   ```bash
+   cd uem-escalonamento-tarefas
+   ```
+
+2. **Execute o programa principal:**
+   ```bash
+   python3 main.py <arquivo_entrada> <algoritmo>
+   ```
+
+   **Algoritmos disponíveis:**
+   - `fcfs` - First-Come, First-Served
+   - `rr` - Round Robin (quantum = 3)
+   - `sjf` - Shortest Job First
+   - `srtf` - Shortest Remaining Time First
+   - `prioc` - Priority Cooperative
+   - `priop` - Priority Preemptive
+   - `priod` - Priority Dynamic
+
+3. **Exemplos de execução:**
+   ```bash
+   # Executa algoritmo FCFS
+   python3 main.py entrada00.txt fcfs
+   
+   # Executa algoritmo Round Robin
+   python3 main.py entrada00.txt rr
+   
+   # Executa algoritmo de prioridades dinâmicas
+   python3 main.py entrada00.txt priod
+   ```
+
+### 5.4. Saída do Programa
+
+Após a execução, será gerado um arquivo `resultado_<algoritmo>.txt` contendo:
+
+1. **Linha 1:** Timeline de execução das tarefas (formato: t1;t2;t1;...)
+2. **Linhas 2-n:** Dados de cada tarefa (formato: ID;ingresso;finalização;turnaround;waiting)
+3. **Última linha:** Médias de turnaround time e waiting time
+
+**Exemplo de saída (`resultado_fcfs.txt`):**
+```
+t1;t1;t1;t1;t1;t2;t2;t3;t3;t3;t3;t4;t5;t5
+t1;0;5;5;0
+t2;0;7;7;5
+t3;1;11;10;6
+t4;3;12;9;8
+t5;5;14;9;7
+8.0;5.2
+```
+
+### 5.5. Arquivos Principais
+
+- `main.py` - Programa principal que coordena a execução
+- `Clock.py` - Componente responsável pelo controle de tempo
+- `Emissor.py` - Componente que emite tarefas baseado no arquivo de entrada
+- `Escalonador.py` - Componente que implementa os algoritmos de escalonamento
+- `Task.py` - Classe que representa uma tarefa
+
+## 6. Discentes
 - [Matheus Foltran Consonni](https://github.com/MatheusFoltran)
 - [Thiago Henrique Calvi](https://github.com/thiagocalvi)

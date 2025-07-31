@@ -4,7 +4,6 @@ import time
 import signal
 import os
 import atexit
-from pathlib import Path
 
 from Task import Task
 from Clock import Clock
@@ -113,7 +112,6 @@ def run_escalonador_process(host, port_escalonador, port_clock, port_emissor, al
     except Exception as e:
         print(f"[ESCALONADOR] Erro no processo do Escalonador: {e}")
 
-
 def print_task_summary(tasks):
     """Imprime resumo das tarefas carregadas"""
     print("\n=== RESUMO DAS TAREFAS ===")
@@ -125,7 +123,6 @@ def print_task_summary(tasks):
     
     print("-" * 32)
     print(f"Total: {len(tasks)} tarefa(s)")
-    print(f"Tempo total simulado estimado: {max(task.arrival_time + task.burst_time for task in tasks)}")
 
 def main():
     """

@@ -22,16 +22,7 @@ class Emissor:
         self.current_clock = 0
         self.all_tasks_emitted = False
         self.server_socket = None
-            
-    def send_to_clock(self, message):
-        """Envia mensagem para o Clock"""
-        try:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-                sock.connect((self.host, self.port_clock))
-                sock.send(message.encode())
-                print(f"Emissor: Mensagem enviada ao Clock: {message}")
-        except Exception as e:
-            print(f"Erro ao enviar mensagem ao Clock: {e}")
+
             
     def send_task_to_escalonador(self, task):
         """Envia uma tarefa para o Escalonador"""
@@ -102,24 +93,45 @@ class Emissor:
         self.check_and_emit_tasks()
         
     def start_server(self):
-        """Inicia o servidor do Emissor para receber mensagens do Clock"""
+        """
+            Inicia o servidor do Emissor para receber mensagens do Clock
+        """
+
         try:
-            self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            self.server_socket.bind((self.host, self.port_emissor))
-            self.server_socket.listen(5)
+            self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # Cria o socket do Emissor
+            self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) # Manter durante o desenvolvimento
+            self.server_socket.bind((self.host, self.port_emissor)) # Vincula o socket ao host e porta
+            self.server_socket.listen(5) # Máximo de conexões pendentes
             
             print(f"Emissor: Servidor iniciado em {self.host}:{self.port_emissor}")
             
             while True:
                 try:
-                    client_socket, client_address = self.server_socket.accept()
+                    # ADICIONAR TIMEOUT para não travar para sempre
+                    self.server_socket.settimeout(1.0)
                     
-                    # Recebe dados do cliente (Clock)
+                    try:
+                        client_socket, client_address = self.server_socket.accept()
+                    except socket.timeout:
+                        continue  # Continua o loop
+                    
+                    # Recebe dados do cliente (Clock ou Escalonador)
                     data = client_socket.recv(1024)
                     if data:
-                        clock_value = int(data.decode().strip())
-                        self.handle_clock_message(clock_value)
+                        message = data.decode().strip()
+                        
+                        # VERIFICAR SE É SINAL DE FIM
+                        if message.upper() == "FIM":
+                            print("Emissor: Recebido sinal de FIM. Encerrando...")
+                            client_socket.close()
+                            break  # Sai do loop
+                        
+                        # Senão, trata como clock
+                        try:
+                            clock_value = int(message)
+                            self.handle_clock_message(clock_value)
+                        except ValueError:
+                            print(f"Emissor: Mensagem inválida recebida: {message}")
                     
                     client_socket.close()
                     
@@ -133,5 +145,3 @@ class Emissor:
             if self.server_socket:
                 self.server_socket.close()
                 print("Emissor: Servidor encerrado")
-
-

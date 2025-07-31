@@ -1,18 +1,23 @@
 class Task:
     def __init__(self, task_id: int, arrival_time: int, burst_time: int, priority: int):
         """
-        Inicializa uma nova instância de Tarefa.
-
+        Inicializa uma tarefa.
+        
         Args:
-            task_id (int): O identificador único da tarefa (ex: "0").
-            arrival_time (int): O tempo de ingresso da tarefa na fila de prontas (unidade de clock).
-            burst_time (int): A duração prevista de execução da tarefa (unidade de clock).
-            priority (int): A prioridade da tarefa. Menor valor numérico = maior prioridade.
+            task_id (int): ID da tarefa
+            arrival_time (int): Tempo de chegada
+            burst_time (int): Tempo de execução
+            priority (int): Prioridade (menor número = maior prioridade)
         """
         self.task_id = task_id
         self.arrival_time = arrival_time
         self.burst_time = burst_time
+        self.remaining_time = burst_time  # Tempo restante de execução
         self.priority = priority
-        self.remaining_time = burst_time # Tempo restante para execução
+        self.original_priority = priority  # Para algoritmos dinâmicos
+        self.dynamic_priority = priority  # Prioridade dinâmica
 
-    
+        # Campos para estatísticas
+        self.start_time = None  # Quando começou a executar
+        self.finish_time = None  # Quando terminou
+        self.has_started = False  # Se já começou a executar
